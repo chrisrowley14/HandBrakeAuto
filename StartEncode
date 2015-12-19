@@ -1,0 +1,44 @@
+# Script By Chris Rowley
+# This script does not need to be run as root as long as it can create fles in the ./Encodes dir.
+
+MysqlUser=Encode #Mysql username
+MysqlPass=3M5su4Mp2mDM5xdH #Mysql password
+
+EncodeInfo=$(mysql -u$MysqlUser -p$MysqlPass -s -N -e "SELECT EnocdeID,Input,Output,Status FROM Encodes.Encodes WHERE Encodes.Status = 0 Limit 1;") #Gets job from mysql table.
+
+EncodeID=$(echo $EncodeInfo | awk '{print $1}') # Gets the encode id.
+EncodeIn=$(echo $EncodeInfo | awk '{print $2}') # Gets the encode input file.
+EncodeOut=$(echo $EncodeInfo | awk '{print $3}') # Gets the encode output file.
+
+if [ -z $EncodeID ]; then # If EncodeID is blank then they is no job.
+        echo "No Jobs To Encode, Sleeping..."
+        sleep 5 # Waits for 5 seconds then restarts itself.
+        ScriptLoc=$(readlink -f "$0")
+        exec $ScriptLoc
+fi
+
+OutputDir="./Encodes/$EncodeID" #The dir where the output will be put, i have it going into a file called its encode id so they are no filename clashes.
+EncodeOut="$OutputDir/$EncodeOut" #Combines the OutputDir and the output file name from mysql job.
+
+if [ ! -d "$OutputDir" ]; then #Checks to see if dir is there, if not then creates it.
+  mkdir $OutputDir
+fi
+
+echo "Encode ID: $EncodeID"
+echo "Input File: $EncodeIn"
+echo "Output File: $EncodeOut"
+
+
+./Encode $EncodeIn $EncodeOut #Sends the required info to my Encode script.
+ExitStatus=$? #Gets the exit status of my encode script.
+
+if ! [ $ExitStatus = 0 ]; then #If the exit status is anything but 0 then it failed.
+        echo "Error during encode of Job $EncodeID"
+        echo "Exit code: $ExitStatus"
+else
+        mysql -u$MysqlUser -p$MysqlPass -s -N -e "UPDATE Encodes.Encodes SET Status = 1 WHERE Encodes.EnocdeID = $EncodeID;" #Updates the job in mysql to say its been encoded.
+        echo "Resting for 50 seconds........"
+        sleep 50 # Sleeps for 50 seconds then restarts itself.
+        ScriptLoc=$(readlink -f "$0")
+        exec $ScriptLoc
+fi

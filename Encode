@@ -1,0 +1,19 @@
+# Script By Chris Rowley
+# This script does not need to be run as root as long as it has write access to ouput location.
+
+if [ -z $1 ]; then #Checks to see if input file has been given.
+	echo "./Encode Input_File Output_File"
+	exit 1
+fi
+if [ -z $2 ]; then #Checks to see if output file has been given.
+        echo "./Encode Input_File Output_File"
+	exit 1
+fi
+
+if [ ! -f $1 ]; then #Checks to see if input file exists.
+    echo "Input File Not Found!"
+    exit 2
+fi
+
+HandBrakeCLI -i $1 -o $2 --subtitle 1 --subtitle-default=1 -m -f mkv -q 25 -e x264 -x threads=auto -w 1280 -l 720 #Executes handbrake.
+exit 0
